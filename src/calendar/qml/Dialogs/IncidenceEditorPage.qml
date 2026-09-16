@@ -134,6 +134,7 @@ FormCard.FormCardPage {
             property date todayDate: new Date()
             property bool isTodo: root.incidenceWrapper.incidenceType === Calendar.IncidenceWrapper.TypeTodo
             property bool isJournal: root.incidenceWrapper.incidenceType === Calendar.IncidenceWrapper.TypeJournal
+            property alias calendarCombo: calendarCombo
 
             FormCard.FormCard {
                 Layout.topMargin: Kirigami.Units.gridUnit
@@ -496,24 +497,24 @@ FormCard.FormCardPage {
                 }
             }
 
-            FormCard.FormHeader {
-                title: i18nc("@title", "Timezone")
-            }
-
-            FormCard.FormCard {
-                FormCard.FormComboBoxDelegate {
-                    id: timeZoneComboBox
-                    text: i18n("Timezone:")
-
-                    model: Calendar.TimeZoneListModel {
-                        id: timeZonesModel
-                    }
-                    textRole: "displayName"
-                    valueRole: "id"
-                    currentIndex: model ? timeZonesModel.getTimeZoneRow(root.incidenceWrapper.timeZone) : -1
-                    onCurrentValueChanged: root.incidenceWrapper.timeZone = currentValue
-                }
-            }
+            // FormCard.FormHeader {
+            //     title: i18nc("@title", "Timezone")
+            // }
+            //
+            // FormCard.FormCard {
+            //     FormCard.FormComboBoxDelegate {
+            //         id: timeZoneComboBox
+            //         text: i18n("Timezone:")
+            //
+            //         model: Calendar.TimeZoneListModel {
+            //             id: timeZonesModel
+            //         }
+            //         textRole: "displayName"
+            //         valueRole: "id"
+            //         currentIndex: model ? timeZonesModel.getTimeZoneRow(root.incidenceWrapper.timeZone) : -1
+            //         onCurrentValueChanged: root.incidenceWrapper.timeZone = currentValue
+            //     }
+            // }
 
             FormCard.FormHeader {
                 title: i18nc("@title", "Repeat")
@@ -558,12 +559,12 @@ FormCard.FormCardPage {
                         {key: "weekly", displayName: i18n("Weekly"), interval: Calendar.IncidenceWrapper.Weekly},
                         {key: "monthly", displayName: i18n("Monthly"), interval: Calendar.IncidenceWrapper.Monthly},
                         {key: "yearly", displayName: i18n("Yearly"), interval: Calendar.IncidenceWrapper.Yearly},
-                        {key: "custom", displayName: i18n("Custom"), interval: -1}
+                        {key: "custom", displayName: i18n("Custom"), interval: -2}
                     ]
 
                     onCurrentValueChanged: if (currentValue >= 0) {
                         root.incidenceWrapper.setRegularRecurrence(currentValue)
-                    } else {
+                    } else if (currentValue === -1) {
                         root.incidenceWrapper.clearRecurrences();
                     }
                 }
@@ -635,7 +636,7 @@ FormCard.FormCardPage {
                 }
 
                 FormCard.AbstractFormDelegate {
-                    visible: recurScaleRuleCombobox.currentValue === Calendar.IncidenceWrapper.Weekly && repeatComboBox.currentValue === -1
+                    visible: recurScaleRuleCombobox.currentValue === Calendar.IncidenceWrapper.Weekly && repeatComboBox.currentValue === -2
                     contentItem: GridLayout {
                         id: recurWeekdayRuleLayout
                         columns: 7
@@ -666,9 +667,7 @@ FormCard.FormCardPage {
                             delegate: QQC2.CheckBox {
                                 required property int index
                                 // We make sure we get dayNumber per the day of the week number used by C++ Qt
-                                property int dayNumber: Qt.locale().firstDayOfWeek + index > 7 ?
-                                                        Qt.locale().firstDayOfWeek + index - 1 - 7 :
-                                                        Qt.locale().firstDayOfWeek + index - 1
+                                  property int dayNumber: ((Qt.locale().firstDayOfWeek + 6 + index) % 7)
 
                                 checked: root.incidenceWrapper.recurrenceData?.weekdays[dayNumber] ?? false
                                 onClicked: {
@@ -683,14 +682,14 @@ FormCard.FormCardPage {
                     }
                 }
 
-                QQC2.ButtonGroup {
-                    buttons: monthlyRecurRadioColumn.children
-                }
-
                 FormCard.AbstractFormDelegate {
                     visible: recurScaleRuleCombobox.currentValue === Calendar.IncidenceWrapper.Monthly && repeatComboBox.currentIndex === 5
                     contentItem: ColumnLayout {
                         id: monthlyRecurRadioColumn
+
+                        QQC2.ButtonGroup {
+                            id: monthlyRecurRadioGroup
+                        }
 
                         QQC2.Label {
                             text: i18n("On:")
@@ -705,6 +704,7 @@ FormCard.FormCardPage {
 
                             checked: root.incidenceWrapper.recurrenceData.type === 6 // Monthly on day (1st of month)
                             onClicked: customRecurrenceLayout.setOccurrence()
+                            QQC2.ButtonGroup.group: monthlyRecurRadioGroup
                         }
 
                         QQC2.RadioButton {
@@ -718,6 +718,7 @@ FormCard.FormCardPage {
                             checked: root.incidenceWrapper.recurrenceData.type === 5 // Monthly on position
                             onTextChanged: if(checked) { root.incidenceWrapper.setMonthlyPosRecurrence(weekOfMonth, dayOfWeek); }
                             onClicked: root.incidenceWrapper.setMonthlyPosRecurrence(weekOfMonth, dayOfWeek)
+                            QQC2.ButtonGroup.group: monthlyRecurRadioGroup
                         }
                     }
                 }
@@ -782,7 +783,7 @@ FormCard.FormCardPage {
                         text: i18nc("@action:button", "Add")
                         icon.name: "list-add"
                         onClicked: {
-                            Calendar.DatePopupSingleton.value = incidenceEndDateCombo.value;
+                            Calendar.DatePopupSingleton.value = incidenceEndDateCombo.dateTime;
                             Calendar.DatePopupSingleton.popupParent = root;
                             Calendar.DatePopupSingleton.y = y + height;
                             Calendar.DatePopupSingleton.open()

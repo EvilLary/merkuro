@@ -497,24 +497,66 @@ FormCard.FormCardPage {
                 }
             }
 
-            // FormCard.FormHeader {
-            //     title: i18nc("@title", "Timezone")
-            // }
-            //
-            // FormCard.FormCard {
-            //     FormCard.FormComboBoxDelegate {
-            //         id: timeZoneComboBox
-            //         text: i18n("Timezone:")
-            //
-            //         model: Calendar.TimeZoneListModel {
-            //             id: timeZonesModel
-            //         }
-            //         textRole: "displayName"
-            //         valueRole: "id"
-            //         currentIndex: model ? timeZonesModel.getTimeZoneRow(root.incidenceWrapper.timeZone) : -1
-            //         onCurrentValueChanged: root.incidenceWrapper.timeZone = currentValue
-            //     }
-            // }
+            FormCard.FormHeader {
+                title: i18nc("@title", "Timezone")
+            }
+
+            FormCard.FormCard {
+                FormCard.FormButtonDelegate {
+                    Calendar.TimeZoneListModel {
+                        id: timeZonesModel
+                        readonly property int currentIndex: timeZonesModel.getTimeZoneRow(root.incidenceWrapper.timeZone)
+                    }
+
+                    text: root.incidenceWrapper.timeZone
+
+                    onClicked: timeZoneDialogLoader.active = true
+
+                    Loader {
+                        id: timeZoneDialogLoader
+                        active: false
+                        asynchronous: true
+                        sourceComponent: Kirigami.Dialog {
+                            id: timeZoneDialog
+
+                            title: i18n("Timezone:")
+                            preferredHeight: Kirigami.Units.gridUnit * 20
+                            preferredWidth: Kirigami.Units.gridUnit * 20
+
+                            // fix binding loop, from FormCard.FormComboBoxDelegate.dialog
+                            x: Math.round((parent.width - width) / 2)
+                            y: Math.round((parent.height - height) / 2)
+                            parent: root.QQC2.Overlay.overlay
+                            modal: true
+                            padding: 0
+
+                            visible: true
+                            onClosed: timeZoneDialogLoader.active = false;
+
+                            ListView {
+                                model: timeZonesModel
+                                currentIndex: -1
+                                reuseItems: true
+                                delegate: Delegates.RoundedItemDelegate {
+                                    required property var model
+                                    required property int index
+
+                                    implicitWidth: ListView.view ? ListView.view.width : Kirigami.Units.gridUnit * 16
+                                    text: model["displayName"]
+                                    highlighted: ListView.isCurrentItem
+
+                                    Layout.topMargin: index == 0 ? Math.round(Kirigami.Units.smallSpacing / 2) : 0
+
+                                    onClicked: {
+                                        root.incidenceWrapper.timeZone = model["displayName"]
+                                        timeZoneDialog.close();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             FormCard.FormHeader {
                 title: i18nc("@title", "Repeat")

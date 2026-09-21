@@ -41,84 +41,106 @@ FormCard.FormCardPage {
             }
         }
 
-        FormCard.FormComboBoxDelegate {
+        FormCard.FormButtonDelegate {
             text: i18nc("@label:listbox", "Select Holiday Regions")
-            checked: Config.showHolidaysInCalendarViews
             enabled: !Config.isShowHolidaysInCalendarViewsImmutable && Config.showHolidaysInCalendarViews
-            model: HolidayRegionModel {
+            onClicked: holidayDialogLoader.active = true;
+
+            HolidayRegionModel {
                 id: holidayRegionModel
             }
-            currentIndex: Config.holidayRegions.length === 0 ? 0 : -1
-            displayText: if (Config.holidayRegions.length === 0) {
-                return currentText;
-            } else {
-                return Config.holidayRegions.map((regionCode) => holidayRegionModel.regionLanguage(regionCode)).join(', ')
-            }
-            textRole: 'displayName'
-            comboBoxDelegate: Delegates.RoundedItemDelegate {
-                id: delegate
 
-                required property string displayName
-                required property string regionCode
-                required property int index
+            Loader {
+                id: holidayDialogLoader
+                active: false
+                sourceComponent: Kirigami.Dialog {
+                    id: timeZoneDialog
 
-                text: displayName
+                    title: i18nc("@label:listbox", "Select Holiday Regions")
+                    preferredHeight: Kirigami.Units.gridUnit * 20
+                    preferredWidth: Kirigami.Units.gridUnit * 20
 
-                checkable: true
-                checked: Config.holidayRegions.includes(regionCode) || (Config.holidayRegions.length === 0 && regionCode.length === 0)
-                onToggled: if (checked) {
-                    const regions = Config.holidayRegions;
-                    regions.push(regionCode);
-                    Config.holidayRegions = regions;
-                    Config.save();
-                } else {
-                    const regions = Config.holidayRegions;
-                    const index = regions.indexOf(regionCode);
-                    if (index !== -1) {
-                        regions.splice(index, 1);
-                        Config.holidayRegions = regions;
-                        Config.save();
-                    }
-                }
+                    // fix binding loop, from FormCard.FormComboBoxDelegate.dialog
+                    x: Math.round((parent.width - width) / 2)
+                    y: Math.round((parent.height - height) / 2)
+                    parent: root.QQC2.Overlay.overlay
+                    modal: true
+                    padding: 0
 
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.mediumSpacing
+                    visible: true
+                    onClosed: holidayDialogLoader.active = false;
 
-                    QQC2.CheckBox {
-                        id: checkBoxItem
-                        focusPolicy: Qt.NoFocus // provided by delegate
+                    ListView {
+                        model: holidayRegionModel
+                        currentIndex: -1
+                        reuseItems: true
+                        delegate: Delegates.RoundedItemDelegate {
+                            id: delegate
 
-                        checkState: delegate.checkState
-                        nextCheckState: delegate.nextCheckState
-                        tristate: delegate.tristate
+                            required property string displayName
+                            required property string regionCode
+                            required property int index
 
-                        topPadding: 0
-                        leftPadding: 0
-                        rightPadding: 0
-                        bottomPadding: 0
+                            text: displayName
 
-                        onToggled: {
-                            delegate.toggle();
-                            delegate.toggled();
+                            checkable: true
+                            checked: Config.holidayRegions.includes(regionCode) || (Config.holidayRegions.length === 0 && regionCode.length === 0)
+                            onToggled: if (checked) {
+                                const regions = Config.holidayRegions;
+                                regions.push(regionCode);
+                                Config.holidayRegions = regions;
+                                Config.save();
+                            } else {
+                                const regions = Config.holidayRegions;
+                                const index = regions.indexOf(regionCode);
+                                if (index !== -1) {
+                                    regions.splice(index, 1);
+                                    Config.holidayRegions = regions;
+                                    Config.save();
+                                }
+                            }
+
+                            contentItem: RowLayout {
+                                spacing: Kirigami.Units.mediumSpacing
+
+                                QQC2.CheckBox {
+                                    id: checkBoxItem
+                                    focusPolicy: Qt.NoFocus // provided by delegate
+
+                                    // checkState: delegate.checkState
+                                    // nextCheckState: delegate.nextCheckState
+                                    // tristate: delegate.tristate
+
+                                    topPadding: 0
+                                    leftPadding: 0
+                                    rightPadding: 0
+                                    bottomPadding: 0
+
+                                    onToggled: {
+                                        delegate.toggle();
+                                        delegate.toggled();
+                                    }
+                                    onClicked: delegate.clicked()
+                                    onPressAndHold: delegate.pressAndHold()
+                                    onDoubleClicked: delegate.doubleClicked()
+
+                                    contentItem: null // Remove right margin
+                                    spacing: 0
+
+                                    enabled: delegate.enabled
+                                    checked: delegate.checked
+
+                                    Accessible.ignored: true
+                                }
+
+                                QQC2.Label {
+                                    text: delegate.text
+                                    elide: Text.ElideRight
+                                    Accessible.ignored: true
+                                    Layout.fillWidth: true
+                                }
+                            }
                         }
-                        onClicked: delegate.clicked()
-                        onPressAndHold: delegate.pressAndHold()
-                        onDoubleClicked: delegate.doubleClicked()
-
-                        contentItem: null // Remove right margin
-                        spacing: 0
-
-                        enabled: delegate.enabled
-                        checked: delegate.checked
-
-                        Accessible.ignored: true
-                    }
-
-                    QQC2.Label {
-                        text: delegate.text
-                        elide: Text.ElideRight
-                        Accessible.ignored: true
-                        Layout.fillWidth: true
                     }
                 }
             }
